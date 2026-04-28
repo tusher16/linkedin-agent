@@ -1,131 +1,128 @@
-# AGENTS.md — AI Assistant Handoff
+# AGENTS.md
 
-This file briefs any AI coding assistant (Claude, Codex, Gemini, OpenCode, etc.)
-on how to continue work without re-deriving context. **Read this first.**
-
----
-
-## Project at a glance
-
-Autonomous LinkedIn content agent. Author: **Mohammad Obaidullah Tusher**
-(AI Engineer, Berlin). Stack: Python 3.12 · LangGraph 1.x · LangSmith · pgvector ·
-FastAPI · Streamlit · Postgres. Self-hosted on a Linux home server via
-Cloudflare Tunnel. Publish target: real LinkedIn via [PostBoost](https://postboost.co).
+Briefs any AI coding assistant (Claude, Codex, Gemini, Copilot, etc.) on this codebase.
+Read this before touching any code.
 
 ---
 
-## Canonical documents (in priority order)
+## Project
 
-| File | Purpose | When to read |
-|---|---|---|
-| [`docs/superpowers/specs/2026-04-26-linkedin-agent-2week-mvp-design.md`](docs/superpowers/specs/2026-04-26-linkedin-agent-2week-mvp-design.md) | **Authoritative design spec.** Architecture, 14-day plan, testing procedure, cuts, risks. | Before any code change. |
-| [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) | Day-by-day plan with test gates per day. | When picking up the next task. |
-| [`TASK.md`](TASK.md) | Checklist mirroring the implementation plan. | To find what's already done. |
-| [`WALKTHROUGH.md`](WALKTHROUGH.md) | What's been built and tested so far. | To pick up where work left off. |
-| [`README.md`](README.md) | Public-facing repo doc. | If editing public surface. |
-| [`docs/adr/`](docs/adr/) | Architecture decision records. | When reconsidering a load-bearing decision. |
-| [`docs/v2-roadmap.md`](docs/v2-roadmap.md) | Parked v2 features. | If asked to add something not in v1. |
+Autonomous LinkedIn content agent. Author: **Mohammad Obaidullah Tusher** (AI Engineer, Berlin).
+Stack: Python 3.12 · LangGraph 1.x · pgvector · FastAPI · Streamlit · PostgreSQL.
+Self-hosted on Linux via Cloudflare Tunnel. Publishes to LinkedIn via PostBoost API.
 
-If those documents conflict, the **design spec wins**. Open a PR to fix the
-conflict before implementing the conflicting feature.
+**Authoritative docs (read before coding):**
+- `IMPLEMENTATION_PLAN.md` — day-by-day plan with test gates
+- `TASK.md` — checklist of what's done / in-progress / pending
+- `WALKTHROUGH.md` — what has been built and tested
 
 ---
 
-## Current status
+## Project Structure
 
-- ✅ **Tutorial-stage scripts (Phase 1-4 of the old plan)**: `archive/01_base_agent.py`, `archive/02_agent_tools.py`. They work. They are NOT the production codebase. Refactored into `src/linkedin_agent/` on Day 1.
-- 📐 **Planning complete (2026-04-26)**: design spec approved by author.
-- 🚀 **Ready to start Day 0** (pre-flight: rotate keys, `git init`, package skeleton, `pyproject.toml`).
+```
+src/linkedin_agent/
+├── schemas/        # Pydantic models — AgentState, all I/O contracts
+├── tools/          # @tool functions, one per file
+├── graph/          # LangGraph StateGraph + node functions
+├── api/            # FastAPI app + JWT auth
+├── db/             # SQLAlchemy models + Alembic migrations + repositories
+└── dashboard/      # Streamlit app (talks to FastAPI only — never DB directly)
+
+tests/
+├── unit/           # Pure logic, no I/O
+├── integration/    # DB + LLM cassettes (VCR)
+├── e2e/            # Full agent run against real services
+├── security/       # Auth, injection, rate-limit tests
+└── eval/           # Cross-model eval (Gemini drafts, GPT-4o-mini judges)
+
+scripts/
+├── refresh.sh      # Update graphify graph + pgvector RAG index together
+├── run_eval.py     # Full 15-topic eval run → LangSmith
+└── smoke_publish.py # Manual PostBoost test publish
+
+docs/
+├── adr/            # Architecture Decision Records — read before reconsidering design
+├── rules/          # Extended hard rules (security.md, coding.md)
+└── v2-roadmap.md   # Parked features — anything not in the 14-day plan goes here
+```
 
 ---
 
-## What to build next
+## Architecture Rules (never violate)
 
-Whatever's marked `🔄 in_progress` in [`TASK.md`](TASK.md). If nothing is, start
-with the next `⏳ pending` item in the order they appear. Do not skip ahead —
-day order is dependency order (e.g., schemas come before graph; graph comes
-before API).
-
----
-
-## Architecture principles (DO NOT VIOLATE)
-
-1. **Typed I/O everywhere.** Every tool, every node, every API endpoint takes and returns Pydantic models. No raw `str`/`dict` exchanges across module boundaries.
-2. **Bounded loops.** The re-draft loop has both an iteration cap (≤2) and a cost cap ($0.05/run). Both are checked inside the LangGraph state on every iteration.
-3. **Outline-first.** Never call `draft_post` without an approved outline. Token waste is real.
-4. **Context-grounded.** Every LLM call retrieves from pgvector. No generic outputs. Static `my_context.md` loading is **dead** as of Day 4.
-5. **LangSmith always on.** `LANGCHAIN_TRACING_V2=true`. Do not bypass tracing for "convenience."
-6. **Cassettes for LLM tests.** Tests that hit an LLM use `pytest-recording` cassettes committed to the repo. CI must run free.
-7. **Coverage gate.** ≥ 75% line coverage on `src/`, ≥ 85% on `schemas/` + `tools/`. CI enforces this.
-8. **Bounded units talk through interfaces.** Dashboard talks to FastAPI only — never directly to the DB or LLM. This makes adding Telegram (v2) purely additive.
+1. **Typed I/O everywhere.** Every tool, node, and endpoint takes and returns Pydantic models. No raw `str`/`dict` across module boundaries.
+2. **Bounded loops.** Re-draft loop: ≤2 iterations AND ≤$0.05/run. Both checked inside LangGraph state on every pass.
+3. **Outline before draft.** Never call `draft_post` without an approved outline.
+4. **Context-grounded.** Every LLM call retrieves from pgvector. No static file loading after Day 4.
+5. **LangSmith always on.** `LANGCHAIN_TRACING_V2=true`. Never bypass tracing.
+6. **VCR cassettes for LLM tests.** Commit cassettes; CI must run free (no live LLM calls in CI).
+7. **Coverage gate.** ≥75% line coverage on `src/`; ≥85% on `schemas/` and `tools/`.
+8. **Dashboard → API → DB.** Dashboard never touches DB or LLM directly. Keeps v2 additions purely additive.
 
 ---
 
-## Hard rules
+## Coding Conventions
 
-- **No new feature ideas accepted after Day 5.** They go to [`docs/v2-roadmap.md`](docs/v2-roadmap.md). Period.
-- **No auto-connection-request sub-agent.** It's a LinkedIn ToS violation. The repo will not contain that code.
-- **Never commit `.env`** or any file containing a real API key. `.env.template` is placeholders only.
-- **Never amend an existing git commit** without explicit author permission. Always make a new commit.
-- **Never bypass `pre-commit`** (`--no-verify` is a senior anti-pattern; if a hook fails, fix the underlying issue).
+See [`docs/rules/coding.md`](docs/rules/coding.md) for full detail. Summary:
+
+- **Functions:** ≤40 lines, one responsibility, verb-noun names (`build_outline`, `publish_post`)
+- **Pydantic models:** `CamelCase`; fields `snake_case`; always use `model_validator` over raw `__init__`
+- **Imports:** stdlib → third-party → local, separated by blank lines; absolute paths only
+- **Tests:** Arrange / Act / Assert with blank lines between; test one behaviour per test function
+- **Comments:** Only when the WHY is non-obvious; no docstring novels; no TODO without a ticket
+- **No print statements** in `src/` — use `structlog` logger; `print()` only in scripts
+- **Type hints on every function** — no `Any` unless unavoidable, document why if used
+
+---
+
+## Security Rules
+
+See [`docs/rules/security.md`](docs/rules/security.md) for full detail. Hard limits:
+
+- **Never commit `.env`** or any file with a real key. `.env.template` is placeholders only.
+- **All FastAPI endpoints require `Depends(get_current_user)`** unless explicitly marked public.
+- **Sanitise every user input** before it reaches an LLM prompt (guardrails node runs first).
+- **Rate-limit all public API routes** (`slowapi`; configured in `api/middleware.py`).
+- **No auto-connection-request code** — LinkedIn ToS violation; reject any PR containing it.
+- **No feature after Day 5** — new ideas go to `docs/v2-roadmap.md`, not into the codebase.
 
 ---
 
 ## Environment
 
-- Python: **3.12** (3.14 caused import hangs in early experiments — do not upgrade).
-- Package manager: **uv** with `pyproject.toml` + `uv.lock`. Do not regenerate `requirements.txt`.
-- Local infra: `docker compose up -d postgres-pgvector` brings up the dev DB.
-- Activate venv: `source .venv/bin/activate` or use `uv run <command>`.
+- **Python 3.12** — do not upgrade (3.14 caused import hangs in early experiments)
+- **Package manager: uv** — `pyproject.toml` + `uv.lock`. Do not regenerate `requirements.txt`.
+- **Venv:** `.venv/bin/python3` (path has spaces — always quote in bash)
+- **Dev DB:** `docker compose up -d postgres-pgvector`
+- **Run command:** `uv run <command>` or `source .venv/bin/activate`
 
 ### Required `.env` keys
 
 ```
-GOOGLE_API_KEY            # Drafter LLM (Gemini)
-OPENROUTER_API_KEY        # Judge LLM (GPT-4o-mini via OpenRouter)
+GOOGLE_API_KEY            # Drafter LLM (Gemini 2.5 Flash)
+OPENROUTER_API_KEY        # Judge LLM (GPT-4o-mini)
 LANGCHAIN_TRACING_V2=true
 LANGCHAIN_PROJECT=linkedin-agent
-LANGCHAIN_API_KEY         # LangSmith
-POSTBOOST_API_KEY         # Real LinkedIn publish
-JWT_SECRET                # FastAPI auth
-ADMIN_USERNAME            # Single admin user (no signup in v1)
+LANGCHAIN_API_KEY
+POSTBOOST_API_KEY
+JWT_SECRET
+ADMIN_USERNAME
 ADMIN_PASSWORD_HASH       # bcrypt hash
 DATABASE_URL              # postgresql+asyncpg://...
-B2_ACCESS_KEY_ID          # Backblaze B2 for nightly pg_dump
+B2_ACCESS_KEY_ID          # Backblaze B2 nightly backup
 B2_SECRET_ACCESS_KEY
 ```
 
 ---
 
-## Key files (post-Day 1 layout)
+## Common Tasks
 
-```
-src/linkedin_agent/
-├── schemas/__init__.py            # AgentState, OutlineOutput, DraftOutput,
-│                                  # ReviewOutput, PostStatus enum
-├── tools/                         # @tool functions; one per file
-├── graph/                         # StateGraph + node functions
-├── api/                           # FastAPI app + auth
-├── db/                            # SQLAlchemy + Alembic + repository
-└── dashboard/                     # Streamlit app
-
-tests/
-├── unit/ · integration/ · e2e/ · security/ · eval/
-└── conftest.py                    # Centralized fixtures
-
-scripts/
-├── run_eval.py                    # Manual full eval
-└── smoke_publish.py               # Manual real PostBoost publish
-
-archive/                           # Tutorial-stage code (do not import from src)
-```
-
----
-
-## Common tasks for AI assistants
-
-- **Adding a new tool:** Create Pydantic input/output schemas in `schemas/`, write the `@tool` function in `tools/`, register it in `graph/` if used by a node, add unit tests with a VCR cassette, update `tools/__init__.py`.
-- **Adding a node:** Type its signature with `AgentState`, write a unit test, wire into `graph/builder.py`, add an integration test for the new edge.
-- **Adding an endpoint:** Add request/response Pydantic models, add the route in `api/`, write 4 tests (200, 401, 422, 404), update the dashboard if it consumes the endpoint.
-- **Re-recording cassettes:** `uv run pytest --record-mode=rewrite path/to/test`. Commit the new cassette in the same PR.
-- **Running the eval:** `uv run python scripts/run_eval.py`. Updates README "Eval Results" table.
+| Task | Where to start |
+|---|---|
+| Add a tool | `schemas/` → `tools/<name>.py` → register in `graph/` → unit test + cassette |
+| Add a node | Type with `AgentState` → unit test → wire in `graph/builder.py` → integration test |
+| Add an endpoint | Pydantic models → `api/routes/` → 4 tests (200, 401, 422, 404) |
+| Re-record cassettes | `uv run pytest --record-mode=rewrite path/to/test` → commit cassette |
+| Run eval | `uv run python scripts/run_eval.py` → updates README eval table |
+| Update context memory | `./scripts/refresh.sh` (graph + RAG together) |
