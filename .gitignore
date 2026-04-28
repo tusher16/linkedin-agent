@@ -1,0 +1,38 @@
+# Environment / secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.python-version
+
+# Private writing — never pushed to GitHub
+writing/
+
+# graphify outputs
+graphify-out/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Claude Code local settings
+.claude/
+
+# Superpowers planning docs (private)
+docs/superpowers/
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
