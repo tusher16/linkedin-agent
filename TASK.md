@@ -16,11 +16,11 @@ Update this as you go. **Definition of "done":** the test gate for that day pass
 ---
 
 ## Day 0 — Pre-flight ✅
-- [ ] Rotate Google API key _(manual — not yet done)_
-- [ ] Rotate OpenRouter API key _(manual — not yet done)_
-- [ ] Rotate LangSmith API key _(manual — not yet done)_
-- [ ] Rotate PostBoost API key _(manual — not yet done)_
-- [ ] Verify each old key returns 401 on a test call _(manual — not yet done)_
+- [x] Rotate Google API key _(skipped — `.env` was never committed; keys not exposed)_
+- [x] Rotate OpenRouter API key _(skipped — `.env` was never committed; keys not exposed)_
+- [x] Rotate LangSmith API key _(skipped — `.env` was never committed; keys not exposed)_
+- [x] Rotate PostBoost API key _(skipped — `.env` was never committed; keys not exposed)_
+- [x] Verify each old key returns 401 on a test call _(skipped — no exposure risk)_
 - [x] Rewrite `.env.template` with placeholder values only
 - [x] `git init` + first commit
 - [x] Create public GitHub repo `tusher16/linkedin-agent` and push
@@ -32,7 +32,7 @@ Update this as you go. **Definition of "done":** the test gate for that day pass
 - [x] Copy `my_context.md` to `docs/personal/`
 - [x] Install `pre-commit` with ruff + mypy hooks (mypy scoped to `src/`)
 - [x] Add `docker-compose.yml` for dev pgvector DB
-- [ ] PostBoost spike: validate rotated key with one trivial API call _(blocked on key rotation)_
+- [ ] PostBoost spike: validate key with one trivial API call _(pending — do before Day 9)_
 
 **Test gate:** ✅ `pytest --collect-only` runs clean. Pre-commit hooks pass on commit.
 
