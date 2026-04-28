@@ -3,7 +3,7 @@
 Mirrors [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) — same content, checkbox format.
 Update this as you go. **Definition of "done":** the test gate for that day passes.
 
-**Status:** Day 1 complete (2026-04-28). Ready to start Day 2.
+**Status:** Day 2 complete (2026-04-28). Ready to start Day 3.
 
 ---
 
@@ -53,20 +53,20 @@ Update this as you go. **Definition of "done":** the test gate for that day pass
 
 ---
 
-## Day 2 — LangGraph StateGraph
-- [ ] `graph/nodes.py` — `guardrails_node`, `plan_outline_node`, `human_approval_node` (interrupt), `draft_post_node`, `review_node`, `publish_node`
-- [ ] Iteration cap (≤ 2 retries) inside `AgentState`
-- [ ] Cost cap ($0.05/run default) inside `AgentState`
-- [ ] `graph/builder.py` — `build_graph()`, conditional edge after review
-- [ ] In-memory checkpoint store wired
-- [ ] `tests/unit/test_graph_nodes.py` — one test per node
-- [ ] `tests/integration/test_graph_flow.py` — happy path
-- [ ] `tests/integration/test_graph_flow.py` — forced re-draft (score < 7 once, then ≥ 7)
-- [ ] `tests/integration/test_graph_flow.py` — iteration cap (always < 7 → terminate `failed_quality`)
-- [ ] `tests/integration/test_graph_flow.py` — cost cap (force tokens > cap → terminate `failed_cost`)
-- [ ] `tests/integration/test_graph_flow.py` — human-approval interrupt pause/resume
+## Day 2 — LangGraph StateGraph ✅
+- [x] `graph/nodes.py` — 8 nodes: guardrails, plan_outline, human_approval, draft_post, review, publish, mark_failed_cost, mark_failed_quality
+- [x] Iteration cap (≤ 2 retries) inside `AgentState` (Day 1)
+- [x] Cost cap ($0.05/run default) inside `AgentState` (Day 1)
+- [x] `graph/builder.py` — `build_graph()` with conditional edge after review
+- [x] In-memory checkpoint store wired (`MemorySaver`); `interrupt_before=["human_approval"]`
+- [x] `tests/unit/test_graph_nodes.py` — 17 unit tests covering every node + `should_redraft`
+- [x] `tests/integration/test_graph_flow.py` — happy path
+- [x] `tests/integration/test_graph_flow.py` — forced re-draft (score 5, then 8)
+- [x] `tests/integration/test_graph_flow.py` — iteration cap → `FAILED_QUALITY`
+- [x] `tests/integration/test_graph_flow.py` — cost cap → `FAILED_COST`
+- [x] `tests/integration/test_graph_flow.py` — human-approval interrupt pause/resume
 
-**Test gate:** All 5 graph integration tests pass.
+**Test gate:** ✅ 22/22 graph tests pass. Total suite: 65 tests, 97.51% coverage.
 
 ---
 
