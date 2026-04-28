@@ -3,7 +3,7 @@
 Mirrors [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) — same content, checkbox format.
 Update this as you go. **Definition of "done":** the test gate for that day passes.
 
-**Status:** Day 0 complete (2026-04-28). Ready to start Day 1.
+**Status:** Day 1 complete (2026-04-28). Ready to start Day 2.
 
 ---
 
@@ -38,18 +38,18 @@ Update this as you go. **Definition of "done":** the test gate for that day pass
 
 ---
 
-## Day 1 — Pydantic schemas + tool refactor
-- [ ] `schemas/post_status.py` — `PostStatus` enum (8 states)
-- [ ] `schemas/__init__.py` — `OutlineOutput`, `DraftOutput`, `ReviewOutput` (with `score: conint(ge=1, le=10)`), `AgentState`
-- [ ] `tools/plan_outline.py` — typed I/O wrapper around the plan tool
-- [ ] `tools/draft_post.py` — typed wrapper for draft
-- [ ] `tools/review_post.py` — typed wrapper for review
-- [ ] `tools/publish_via_postboost.py` — STUB returning `MOCK` (real impl Day 9)
-- [ ] `tests/unit/test_schemas.py` — roundtrip, score range, status transitions
-- [ ] `tests/unit/test_tools.py` — each tool with VCR cassette
-- [ ] Coverage on `schemas/` ≥ 85%, on `tools/` ≥ 85%
+## Day 1 — Pydantic schemas + tool refactor ✅
+- [x] `schemas/post_status.py` — `PostStatus` enum (8 states)
+- [x] `schemas/{outline,draft,review,agent_state}.py` + `__init__.py` exports
+- [x] `tools/plan_outline.py` — typed wrapper using `with_structured_output`
+- [x] `tools/draft_post.py` — typed wrapper for draft
+- [x] `tools/review_post.py` — typed wrapper for review
+- [x] `tools/publish_via_postboost.py` — STUB returning `mock_<uuid>` (real impl Day 9)
+- [x] `tests/unit/test_schemas.py` — 30 tests covering validation, score range, status transitions
+- [x] `tests/unit/test_tools.py` — 13 tests with `_StubChatModel` (VCR deferred to integration tests)
+- [x] Coverage: schemas/ 100%, tools/ 97%, overall 96.77%
 
-**Test gate:** Schema + tool tests green; coverage gate met.
+**Test gate:** ✅ 43/43 tests passing in <1s. Coverage 96.77% (gate 75%).
 
 ---
 
