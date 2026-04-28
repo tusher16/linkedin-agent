@@ -3,7 +3,7 @@
 Mirrors [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) — same content, checkbox format.
 Update this as you go. **Definition of "done":** the test gate for that day passes.
 
-**Status:** Planning complete (2026-04-26). Ready to start Day 0.
+**Status:** Day 0 complete (2026-04-28). Ready to start Day 1.
 
 ---
 
@@ -15,25 +15,26 @@ Update this as you go. **Definition of "done":** the test gate for that day pass
 
 ---
 
-## Day 0 — Pre-flight
-- [ ] Rotate Google API key
-- [ ] Rotate OpenRouter API key
-- [ ] Rotate LangSmith API key
-- [ ] Rotate PostBoost API key
-- [ ] Verify each old key returns 401 on a test call
-- [ ] Rewrite `.env.template` with placeholder values only
-- [ ] `git init` + first commit
-- [ ] Create public GitHub repo `tusher16/linkedin-agent` and push
-- [ ] Replace `requirements.txt` with `pyproject.toml` + `uv.lock`
-- [ ] Create directory structure: `src/linkedin_agent/{schemas,tools,graph,api,db,dashboard}/`
-- [ ] Create `tests/{unit,integration,e2e,security,eval}/` + `tests/conftest.py`
-- [ ] Create `scripts/`, `docs/{adr,specs,personal}/`, `archive/`
-- [ ] Move `01_base_agent.py` and `02_agent_tools.py` to `archive/`
-- [ ] Move `my_context.md` to `docs/personal/`
-- [ ] Install `pre-commit` with ruff + mypy hooks
-- [ ] PostBoost spike: validate rotated key with one trivial API call
+## Day 0 — Pre-flight ✅
+- [ ] Rotate Google API key _(manual — not yet done)_
+- [ ] Rotate OpenRouter API key _(manual — not yet done)_
+- [ ] Rotate LangSmith API key _(manual — not yet done)_
+- [ ] Rotate PostBoost API key _(manual — not yet done)_
+- [ ] Verify each old key returns 401 on a test call _(manual — not yet done)_
+- [x] Rewrite `.env.template` with placeholder values only
+- [x] `git init` + first commit
+- [x] Create public GitHub repo `tusher16/linkedin-agent` and push
+- [x] Replace `requirements.txt` with `pyproject.toml` + `uv.lock`
+- [x] Create directory structure: `src/linkedin_agent/{schemas,tools,graph,api,db,dashboard,guardrails}/`
+- [x] Create `tests/{unit,integration,e2e,security,eval}/` + `tests/conftest.py`
+- [x] Create `docs/{adr,personal,eval}/`, `archive/`
+- [x] Move `01_base_agent.py` and `02_agent_tools.py` to `archive/`
+- [x] Copy `my_context.md` to `docs/personal/`
+- [x] Install `pre-commit` with ruff + mypy hooks (mypy scoped to `src/`)
+- [x] Add `docker-compose.yml` for dev pgvector DB
+- [ ] PostBoost spike: validate rotated key with one trivial API call _(blocked on key rotation)_
 
-**Test gate:** `pytest --collect-only` runs. `git status` clean. Pre-commit runs on commit.
+**Test gate:** ✅ `pytest --collect-only` runs clean. Pre-commit hooks pass on commit.
 
 ---
 
