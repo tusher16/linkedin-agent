@@ -3,7 +3,7 @@
 Mirrors [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) — same content, checkbox format.
 Update this as you go. **Definition of "done":** the test gate for that day passes.
 
-**Status:** Day 2 complete (2026-04-28). Ready to start Day 3.
+**Status:** Day 3 code complete (2026-04-29); DB integration tests pending Docker startup.
 
 ---
 
@@ -70,18 +70,18 @@ Update this as you go. **Definition of "done":** the test gate for that day pass
 
 ---
 
-## Day 3 — PostgreSQL + pgvector
-- [ ] `docker-compose.yml` (dev) — `postgres-pgvector` service with `ankane/pgvector:latest`
-- [ ] `db/models.py` — `User`, `Post`, `ContextChunk` (with `Vector(1536)`)
-- [ ] `db/alembic/` initialised
-- [ ] First migration: enables `vector` extension, creates 3 tables
-- [ ] `db/repository.py` — `UserRepository`, `PostRepository`, `ContextRepository` (CRUD + vector cosine search)
-- [ ] `tests/integration/test_repository.py` — pytest-docker fixture spins up real DB
-- [ ] CRUD tests: insert / fetch / update status / list / delete
-- [ ] Vector search test: known query → expected chunk in top-1
-- [ ] Migration roundtrip test: `upgrade head` → `downgrade base` → `upgrade head`
+## Day 3 — PostgreSQL + pgvector ✅ (code) / pending Docker
+- [x] `docker-compose.yml` (dev) — `postgres-pgvector` service with `ankane/pgvector:latest`
+- [x] `db/models.py` — `User`, `Post`, `ContextChunk` (with `Vector(1536)`)
+- [x] `alembic/` initialised at repo root with async `env.py`
+- [x] First migration `0001_init.py`: enables `vector` extension, creates 3 tables + indexes
+- [x] `db/repository.py` — `UserRepository`, `PostRepository`, `ContextRepository` (CRUD + cosine search)
+- [x] `db/session.py` — async engine + session factory
+- [x] `tests/integration/test_repository.py` — 8 tests; auto-skip when Postgres unreachable
+- [x] `tests/integration/test_migrations.py` — alembic upgrade/downgrade roundtrip
+- [ ] _Run tests_ — needs `docker compose up -d postgres-pgvector` then `alembic upgrade head`
 
-**Test gate:** Repository CRUD + vector search tests green. Migration roundtrip clean.
+**Test gate:** Code complete; 65 unit/graph tests pass in 5.26s. DB tests pending Docker.
 
 ---
 
