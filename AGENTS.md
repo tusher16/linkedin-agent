@@ -26,12 +26,18 @@ src/linkedin_agent/
 ├── tools/          # @tool functions, one per file
 ├── graph/          # LangGraph StateGraph + node functions
 ├── api/            # FastAPI app + JWT auth
-├── db/             # SQLAlchemy models + Alembic migrations + repositories
-└── dashboard/      # Streamlit app (talks to FastAPI only — never DB directly)
+├── db/             # session.py, models.py, repository.py — async SQLAlchemy
+├── dashboard/      # Streamlit app (talks to FastAPI only — never DB directly)
+└── guardrails/     # Prompt-injection detection (Day 8)
+
+alembic/            # at REPO ROOT — async migrations
+├── env.py
+├── versions/0001_init.py    # vector ext + 3 tables
+└── alembic.ini  (one level up at repo root)
 
 tests/
-├── unit/           # Pure logic, no I/O
-├── integration/    # DB + LLM cassettes (VCR)
+├── unit/           # Pure logic, no I/O — schemas, tools, graph nodes
+├── integration/    # DB + LLM cassettes (VCR) — repository, graph_flow, migrations
 ├── e2e/            # Full agent run against real services
 ├── security/       # Auth, injection, rate-limit tests
 └── eval/           # Cross-model eval (Gemini drafts, GPT-4o-mini judges)
@@ -94,8 +100,9 @@ See [`docs/rules/security.md`](docs/rules/security.md) for full detail. Hard lim
 - **Python 3.12** — do not upgrade (3.14 caused import hangs in early experiments)
 - **Package manager: uv** — `pyproject.toml` + `uv.lock`. Do not regenerate `requirements.txt`.
 - **Venv:** `.venv/bin/python3` (path has spaces — always quote in bash)
-- **Dev DB:** `docker compose up -d postgres-pgvector`
+- **Dev DB:** `docker compose up -d postgres-pgvector` then `alembic upgrade head`
 - **Run command:** `uv run <command>` or `source .venv/bin/activate`
+- **graphify is a global tool, NOT a project dep.** Install with `uv tool install graphifyy`. Never `uv add graphifyy` — its 27 tree-sitter packages make `import pytest` take 90+ seconds.
 
 ### Required `.env` keys
 
@@ -124,5 +131,6 @@ B2_SECRET_ACCESS_KEY
 | Add a node | Type with `AgentState` → unit test → wire in `graph/builder.py` → integration test |
 | Add an endpoint | Pydantic models → `api/routes/` → 4 tests (200, 401, 422, 404) |
 | Re-record cassettes | `uv run pytest --record-mode=rewrite path/to/test` → commit cassette |
+| Add a migration | `alembic revision -m "<msg>"` → edit `alembic/versions/<rev>.py` → `alembic upgrade head` |
 | Run eval | `uv run python scripts/run_eval.py` → updates README eval table |
 | Update context memory | `./scripts/refresh.sh` (graph + RAG together) |

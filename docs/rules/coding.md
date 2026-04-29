@@ -17,6 +17,11 @@
   - Use `model_validator` over custom `__init__`
   - Never use `dict` as a function parameter where a Pydantic model fits
 - Enums for fixed value sets (`PostStatus`, `ReviewVerdict`) — never raw strings.
+- SQLAlchemy 2.x: `class Base(DeclarativeBase): # type: ignore[misc]` is the documented escape hatch for mypy strict. Annotate `result.scalar_one_or_none()` returns explicitly:
+  ```python
+  user: User | None = result.scalar_one_or_none()
+  return user
+  ```
 
 ## Imports
 

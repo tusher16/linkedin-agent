@@ -5,7 +5,7 @@ work mid-stream should read this end-to-end before touching code.
 
 **Project:** Autonomous LinkedIn content agent — LangGraph + RAG + pgvector.
 **Source of truth:** `docs/superpowers/specs/2026-04-26-linkedin-agent-2week-mvp-design.md`
-**Status as of 2026-04-29:** Days 0-2 complete; ready for Day 3 (PostgreSQL + pgvector).
+**Status as of 2026-04-29:** Days 0-3 (code) complete; DB tests pending Docker startup.
 
 ---
 
@@ -210,6 +210,60 @@ Total suite: 65 tests passing in 1.23s. Coverage: 97.51%.
 
 ---
 
+## Day 3 — PostgreSQL + pgvector (2026-04-29)
+
+### What was built
+
+**`src/linkedin_agent/db/`** (4 files):
+
+| File | Purpose |
+|---|---|
+| `session.py` | `make_engine(url)`, `make_session_factory(engine)` — async-only. Reads `DATABASE_URL` from env, defaults to local Postgres. |
+| `models.py` | `User`, `Post`, `ContextChunk` SQLAlchemy 2.x models. `EMBEDDING_DIM = 1536` for `text-embedding-3-small`. |
+| `repository.py` | `UserRepository`, `PostRepository`, `ContextRepository`. All `async`. `ContextRepository.search_similar(query, top_k)` uses `cosine_distance` from pgvector. |
+| `__init__.py` | Clean exports of every public name. |
+
+**`alembic/`** (at repo root, NOT under `db/`):
+
+| File | Purpose |
+|---|---|
+| `alembic.ini` | Standard config. URL converted from `postgresql://` → `postgresql+asyncpg://` in `env.py`. |
+| `env.py` | Async-friendly. Reads `DATABASE_URL` from env, falls back to ini. Imports `Base` from `linkedin_agent.db.models`. |
+| `versions/0001_init.py` | `CREATE EXTENSION vector` + 3 tables + 2 indexes. Reversible (`downgrade()` drops everything). |
+
+**Tests (`tests/integration/`):**
+- `test_repository.py` — 8 tests: 2 user, 2 post, 4 context (insert/upsert, top-1, top-k, delete-by-source).
+- `test_migrations.py` — `alembic downgrade base → upgrade head → downgrade base → upgrade head`.
+- Both auto-skip if Postgres is unreachable on `localhost:5432` (uses `socket.create_connection` to probe).
+
+### Key decisions
+
+- **Alembic at repo root, not `db/alembic/`.** Spec said the latter; standard convention is the former, and `.venv/bin/alembic upgrade head` from repo root just works without path manipulation.
+- **`Vector(1536)` from `pgvector.sqlalchemy`.** SQLAlchemy column type. Cosine distance is `column.cosine_distance(query_vector)`, which compiles to the `<=>` operator pgvector exposes.
+- **Async everything.** `asyncpg` driver, `AsyncSession`, `await session.execute(...)`. The pgvector ORM types support async out of the box.
+- **`TRUNCATE ... CASCADE` between tests** instead of transactional rollback. Faster at our scale and avoids cascade complexity with the Vector column.
+- **Session is yielded as an async fixture.** `pytest_asyncio.fixture()` not `pytest.fixture()` — the standard fixture decorator can't yield from async generators.
+- **Skip integration tests gracefully when Postgres is down.** A `socket.create_connection((host, port), timeout=1)` probe; if it fails, `pytestmark = pytest.mark.skipif(...)` skips the whole module. CI without docker still runs unit tests.
+
+### Gotchas
+
+- **`graphifyy` in project deps was catastrophic for pytest startup.** It pulls 27 tree-sitter language packages, each with entry points. `import pytest` took **91 seconds** because Python scans every installed package's metadata. Fix: `uv remove graphifyy`, nuke `.venv`, `uv sync --extra dev`, then install graphify globally with `uv tool install graphifyy`. The graph hook still works because it calls the global binary.
+- **`uv sync` doesn't remove orphaned packages.** After `uv remove graphifyy`, the tree-sitter packages stayed installed because they were transitive. `rm -rf .venv && uv sync --extra dev` is the only reliable way to get a clean tree.
+- **mypy strict trips on SQLAlchemy.** `class Base(DeclarativeBase)` is "subclassing Any" because the metaclass can't be expressed in the type system without the SQLAlchemy mypy plugin. Fix: `# type: ignore[misc]` on the Base class. Also explicitly annotate `result.scalar_one_or_none()` returns:
+  ```python
+  user: User | None = result.scalar_one_or_none()
+  return user
+  ```
+- **`alembic` requires `asyncpg`-compatible URL but `alembic.ini` template uses sync.** Fixed in `env.py` by detecting `postgresql://` and `postgresql+psycopg2://` prefixes and converting to `postgresql+asyncpg://`.
+- **`TRUNCATE` between tests requires CASCADE.** `context_chunks` references no FK but ordering matters — `TRUNCATE TABLE context_chunks, posts, users CASCADE` works regardless.
+- **The `__init_subclass__` metaclass machinery in SQLAlchemy 2.x took several seconds to import** even with a clean venv. Subsequent test runs are <6s; first run after a fresh import takes 10-15s.
+
+### Test gate
+⏸️ Code complete; awaiting `docker compose up -d postgres-pgvector` to run integration tests.
+✅ 65 unit/graph tests pass in 5.26s with the new code in place. 8 DB tests skip cleanly.
+
+---
+
 ## What the next agent should know
 
 ### Active conventions
@@ -256,13 +310,16 @@ Total suite: 65 tests passing in 1.23s. Coverage: 97.51%.
   for the `with_structured_output` chain. Subclass `Runnable` properly.
 - Re-running pytest without deleting `.coverage` — sqlite3 schema collision.
 
-### Day 3 setup needed
+### Day 4 setup needed
 
-PostgreSQL + pgvector. Will require:
-- `docker compose up -d postgres-pgvector` (`ankane/pgvector:latest` already in `docker-compose.yml`)
-- New deps: `sqlalchemy[asyncio]`, `alembic`, `asyncpg`, `pgvector` (already in `pyproject.toml`)
-- Environment: `DATABASE_URL=postgresql+asyncpg://postgres:password@localhost:5432/linkedin_agent`
+RAG pipeline. Will require:
+- Postgres running (Day 3 DB) with `0001_init` migration applied
+- `OPENAI_API_KEY` in `.env` for `text-embedding-3-small`
+- A working `ContextRepository` (already shipped in Day 3)
 
-The `db/` package is empty. Day 3 fills it with `models.py`, `repository.py`,
-and Alembic migrations. Test gate: `alembic upgrade head → downgrade base → upgrade head`
+Day 4 work:
+- `scripts/index_context.py` — chunk `docs/personal/my_context.md` → embed → upsert
+- `tools/retrieve_context.py` — top-k cosine search, returns typed list
+- Wire `retrieve_context` into `plan_outline_node` and `draft_post_node`
+- Test gate: recall@3 = 100% on 3 hand-picked (query, expected_chunk_id) tuples
 runs clean; CRUD tests pass against pytest-docker.
