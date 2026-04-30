@@ -8,6 +8,7 @@ from .nodes import (
     mark_failed_quality,
     plan_outline_node,
     publish_node,
+    retrieve_context_node,
     review_node,
     should_redraft,
 )
@@ -22,6 +23,7 @@ __all__ = [
     "mark_failed_quality",
     "plan_outline_node",
     "publish_node",
+    "retrieve_context_node",
     "review_node",
     "should_redraft",
 ]

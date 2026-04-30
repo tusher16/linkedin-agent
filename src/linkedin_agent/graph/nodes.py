@@ -1,19 +1,58 @@
+import asyncio
 from typing import Any
 
+from ..db import make_engine, make_session_factory
 from ..schemas import AgentState, PostStatus
-from ..tools import draft_post, plan_outline, publish_via_postboost, review_post
+from ..tools import (
+    draft_post,
+    plan_outline,
+    publish_via_postboost,
+    retrieve_context,
+    review_post,
+)
 
 # Rough Gemini 2.5 Flash cost estimates per call (USD).
 # Real cost tracking comes in Day 5 from LangSmith trace metadata.
 COST_PER_OUTLINE = 0.0002
 COST_PER_DRAFT = 0.0008
 COST_PER_REVIEW = 0.0003
+COST_PER_RETRIEVAL = 0.00001  # text-embedding-3-small per query
 
 
 def guardrails_node(state: AgentState) -> dict[str, Any]:
     # Day 8 wires real prompt-injection detection here.
     # For now: every topic passes; the node only advances status.
     return {"status": PostStatus.OUTLINE_PENDING}
+
+
+def retrieve_context_node(state: AgentState) -> dict[str, Any]:
+    """Fetch top-k context chunks from pgvector for the topic.
+
+    Sync wrapper around the async retrieval. Falls back to empty list on any
+    failure so the graph keeps running even if pgvector or OpenAI is down.
+    """
+    if not state.topic.strip():
+        return {"retrieved_context": []}
+
+    async def _retrieve() -> list[str]:
+        engine = make_engine()
+        try:
+            factory = make_session_factory(engine)
+            async with factory() as session:
+                return await retrieve_context(state.topic, session, top_k=3)
+        finally:
+            await engine.dispose()
+
+    try:
+        chunks = asyncio.run(_retrieve())
+    except Exception:
+        # Graceful degradation: agent runs without RAG context if it fails.
+        chunks = []
+
+    return {
+        "retrieved_context": chunks,
+        "cost_usd": state.cost_usd + COST_PER_RETRIEVAL,
+    }
 
 
 def plan_outline_node(state: AgentState) -> dict[str, Any]:

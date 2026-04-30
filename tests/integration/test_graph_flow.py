@@ -79,6 +79,12 @@ def _patch_tools(
     monkeypatch.setattr(nodes, "plan_outline", _plan)
     monkeypatch.setattr(nodes, "draft_post", _draft)
     monkeypatch.setattr(nodes, "review_post", _review)
+
+    # Short-circuit retrieve_context_node so tests don't hit Postgres.
+    # The node's own try/except already handles failures, but stubbing
+    # asyncio.run avoids paying the connection-attempt cost on every run.
+    monkeypatch.setattr(nodes.asyncio, "run", lambda _coro: [])
+
     return calls
 
 

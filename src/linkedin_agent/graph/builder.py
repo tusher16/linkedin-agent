@@ -12,6 +12,7 @@ from .nodes import (
     mark_failed_quality,
     plan_outline_node,
     publish_node,
+    retrieve_context_node,
     review_node,
     should_redraft,
 )
@@ -21,6 +22,7 @@ def build_graph(checkpointer: Any | None = None) -> Any:
     workflow: StateGraph = StateGraph(AgentState)
 
     workflow.add_node("guardrails", guardrails_node)
+    workflow.add_node("retrieve_context", retrieve_context_node)
     workflow.add_node("plan_outline", plan_outline_node)
     workflow.add_node("human_approval", human_approval_node)
     workflow.add_node("draft_post", draft_post_node)
@@ -30,7 +32,8 @@ def build_graph(checkpointer: Any | None = None) -> Any:
     workflow.add_node("fail_quality", mark_failed_quality)
 
     workflow.set_entry_point("guardrails")
-    workflow.add_edge("guardrails", "plan_outline")
+    workflow.add_edge("guardrails", "retrieve_context")
+    workflow.add_edge("retrieve_context", "plan_outline")
     workflow.add_edge("plan_outline", "human_approval")
     workflow.add_edge("human_approval", "draft_post")
     workflow.add_edge("draft_post", "review")

@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class PostStatus(str, Enum):
+class PostStatus(StrEnum):
     QUEUED = "queued"
     OUTLINE_PENDING = "outline_pending"
     READY_TO_PUBLISH = "ready_to_publish"

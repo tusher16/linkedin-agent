@@ -49,6 +49,7 @@ scripts/
 
 docs/
 ├── adr/            # Architecture Decision Records — read before reconsidering design
+├── bugs/           # Open known issues — read before implying tests are green
 ├── rules/          # Extended hard rules (security.md, coding.md)
 └── v2-roadmap.md   # Parked features — anything not in the 14-day plan goes here
 ```
